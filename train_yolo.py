@@ -1,5 +1,12 @@
 from ultralytics import YOLO
 
-model = YOLO("yolov8s.yaml")
+model = YOLO("yolov8n.pt")
 
-model.train(data="data.yaml", epochs=2, batch = 32, workers=8, optimizer="Adam", imgsz = 416)
+model.train(
+    data="defect_data/data.yaml",
+    epochs=50,
+    batch=8,
+    workers=4,
+    imgsz=640,
+    device=0,
+)
