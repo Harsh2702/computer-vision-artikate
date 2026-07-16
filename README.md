@@ -1,3 +1,50 @@
+# Casting-defect YOLOv8 fine-tuning
+
+Fine-tune YOLOv8 on a small custom defect-detection dataset.
+
+## Setup
+
+1. Create/activate a Python environment with a CUDA build of PyTorch:
+   ```
+   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+   pip install ultralytics
+   ```
+2. Drop your Roboflow YOLOv8 export into `defect_data/` at the repo root. Layout must be:
+   ```
+   defect_data/
+   ├── train/{images,labels}
+   ├── valid/{images,labels}
+   ├── test/{images,labels}
+   └── data.yaml   # nc, names, path, train/val/test
+   ```
+   `defect_data/` is gitignored — data stays local.
+
+## Before training: clean the data
+
+Always run the cleaning script before kicking off a training run. It validates every image/label pair and deletes anything broken (orphan images, corrupt files, labels with wrong class indices, malformed lines, out-of-range coords, zero-area boxes). It also dedupes duplicate label lines in place.
+
+```
+python clean_data.py --root defect_data --nc 1
+```
+
+Add `--dry-run` first to see what it would delete without touching files:
+
+```
+python clean_data.py --root defect_data --nc 1 --dry-run
+```
+
+`--nc` must match `nc:` in your `data.yaml`.
+
+## Train
+
+```
+python train_yolo.py
+```
+
+Config lives in `train_yolo.py` (model, epochs, batch, imgsz, device). Outputs go to `runs/detect/<name>/` — weights (`best.pt`, `last.pt`), `results.csv`, and evaluation plots (PR / P / R / F1 curves, confusion matrix, val batch previews).
+
+---
+
 # Section 1
 
 ## Scenario A — Accuracy drops after quantization
