@@ -38,6 +38,34 @@ After `clean_data.py` (drops broken labels, dedupes lines) and `build_holdout_vi
 | `failure_analysis.py` | Reads a benchmark CSV, picks top-confidence and borderline frames, dumps raw + annotated frames. |
 | `tests/test_infer.py` | Regression test: `Detector` output must match ultralytics reference within tolerance. Catches the Section 3 bug. |
 
+## Workflow
+
+requirements.txt         (install env)
+        │
+        ▼
+defect_data/             (raw Roboflow zip extracted)
+        │
+        ▼
+clean_data.py            (delete broken image/label pairs)
+        │
+        ▼
+build_holdout_video.py   (split train → keep + test_video.mp4)
+        │
+        ▼
+train_yolo.py            (fine-tune → best.pt)
+        │
+        ▼
+export.py                (best.pt → FP32 / FP16 / INT8 ONNX)
+        │
+        ▼
+tests/test_infer.py      (regression check via infer.py)
+        │
+        ▼
+bench.py                 (run infer.py on test_video → CSVs)
+        │
+        ▼
+failure_analysis.py      (dump worst frames → jpgs)
+
 ## Reproduce
 
 ```
@@ -99,4 +127,4 @@ None of these would survive a stricter confidence threshold, which is another wa
 
 ## Git history
 
-The commit log is the point. It walks: initial import, remove vendored ultralytics, gitignore data, clean_data, cleanup, add dataset + video, ONNX wrapper, export/bench/test scaffolding, **the buggy perf tweak**, **the fix + regression test**. That last pair is Section 3.
+The commit log is the point. It walks: initial import, remove vendored ultralytics, gitignore data, clean_data, cleanup, add dataset + video, ONNX wrapper, export/bench/test scaffolding, **the buggy perf tweak**, **the fix + regression test**.
