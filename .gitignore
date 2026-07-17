@@ -151,5 +151,3 @@ weights/
 *_openvino_model/
 *_paddle_model/
 
-# dataset (kept local)
-defect_data/

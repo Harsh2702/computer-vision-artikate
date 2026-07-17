@@ -1,0 +1,14 @@
+path: ../defect_data
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 1
+names: ['defect']
+
+roboflow:
+  workspace: tsd-9qn6z
+  project: casting-defect-adiic-rhmq6
+  version: dataset
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/tsd-9qn6z/casting-defect-adiic-rhmq6/dataset/dataset
