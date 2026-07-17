@@ -1,4 +1,4 @@
-path: ../defect_data
+path: defect_data
 train: train/images
 val: valid/images
 test: test/images
