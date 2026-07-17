@@ -49,7 +49,9 @@ def main():
     ap.add_argument("--weights", required=True)
     ap.add_argument("--data", default="defect_data/data.yaml")
     ap.add_argument("--imgsz", type=int, default=640)
-    ap.add_argument("--modes", nargs="+", default=["fp32", "fp16", "int8"])
+    # FP32 goes last: ultralytics writes fp32 and fp16 to the same "best.onnx" path,
+    # so exporting FP32 first then FP16 silently overwrites the FP32 file.
+    ap.add_argument("--modes", nargs="+", default=["fp16", "int8", "fp32"])
     args = ap.parse_args()
 
     repo = Path(__file__).parent.resolve()

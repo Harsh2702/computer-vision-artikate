@@ -57,11 +57,37 @@
 
 # Section 3 — Find the Silent Bug
 
-*Pending. Will be filled in after the audit of the detector + postprocessing code, with exact file and line, why the output looks plausible most of the time, the fix, a test that would have caught it, and a two- to three-sentence note on the testing gap.*
+**File and line.** `infer.py`, inside `Detector._letterbox`, the `cv2.resize(...)` call used `interpolation=cv2.INTER_NEAREST`. The intended value is `cv2.INTER_LINEAR`, which is what the ultralytics training pipeline uses. The buggy version was introduced in commit `c951c69` as a "perf" tweak. Fixed in commit `259e887`.
+
+**What it does wrong.** Every input frame is resized before it hits the model. Nearest-neighbour interpolation snaps each output pixel to the closest source pixel, so any smooth intensity change gets replaced by a stepped one. The tensor that reaches the model looks different from the tensor the model was trained on: same shape, same intensity range, subtly different pixel values, especially along edges. YOLOv8 heads are trained to be moderately robust to small perturbations, so most predictions still land in roughly the right place, they just shift.
+
+**Why it looks plausible most of the time.** Three reasons stack:
+
+1. **The pipeline never errors.** Shapes, dtypes, coordinate math are all fine. It runs at full speed and produces boxes.
+2. **Most boxes still fire.** For high-contrast defects the model's confidence is well above threshold either way, so top-1 detections rarely move. Only near-threshold cases flip.
+3. **This dataset is grayscale.** I checked and B = G = R exactly on every casting image (mean absolute channel diff = 0). That means several classical silent-preprocessing bugs I first considered (BGR vs RGB, wrong pad colour) are truly invisible on this data because their affected channels or regions are identical. Interpolation was the one preprocessing knob that still measurably shifts pixel values on grayscale square inputs.
+
+Numerically, on 12 defective validation images at `conf=0.05`, the buggy version reported 6 total detections vs the ultralytics reference's 5. One image flipped from 0 detections to 1. Mean max-confidence per image shifted by about 0.008. A visual demo would show the same boxes in the same places, only slightly bumpier.
+
+**The fix.**
+
+```python
+resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+```
+
+That is it. One argument. It matches the interpolation used by ultralytics's own preprocessing so the ONNX wrapper feeds the model the same distribution it was trained on.
+
+**Test that would have caught it (added in the fix commit).** `tests/test_infer.py::test_onnx_matches_ultralytics_reference`. It picks the first 12 defective validation images, runs both the ultralytics reference (`YOLO(best.pt)(path)`) and our `Detector` on `best.onnx` at `conf=0.05`, and asserts two things: total detection count divergence per image is under 0.05, and the mean per-image max-confidence gap is under 0.005. On the buggy commit the test fails with `detection count diverges: ref=5, ours=6, gap/img=0.08 > 0.05`. After the fix it passes cleanly.
+
+The threshold matters: I run the test at `conf=0.05` rather than a normal `0.25` on purpose, because on this weakly-trained model that is the region where near-threshold flips are actually observable. A stricter model would let me raise the threshold; the point is to test in the band where drift matters, not where the model is over-confident anyway.
+
+**What the bug's existence says about the testing gap.** The original workflow had no test comparing our ONNX inference against the framework we trained with. Visual smoke checks passed, and every downstream step (export, video walkthrough) also passed because the pipeline doesn't crash. The gap is a missing behavioural equivalence test between the training-time inference path and the deployed inference path: every preprocessing knob (resize interpolation, channel order, normalisation, letterbox pad colour, dtype) has to be pinned by a test that runs both stacks on the same image and compares outputs within a tight tolerance. Adding this test once, and running it in CI on every commit that touches `infer.py`, would have caught this change the moment it was made.
 
 ---
 
 # Section 4 — Edge & Air-Gapped Deployment Design
+
+Numbers below fall into two buckets. **Measured on my box** (RTX 3050 Laptop, 4 GB, ONNX Runtime CPU EP because cuDNN 9 is not installed for the GPU EP): FP32 ONNX YOLOv8n at 640×640 runs at 30 ms/frame mean, 32 ms p95 on the held-out video. FP16 was slower (55 ms) because CPU has no native FP16 fast path. INT8 was 59 ms for the same reason plus dequantise overhead. Model sizes: FP32 12.3 MB, FP16 6.2 MB, INT8 3.4 MB. **Estimated / not measured here**: everything Orin-related, everything about 8-stream DeepStream, INT8 speedups on hardware that actually accelerates it. I flag those inline.
 
 ### 1. Model family and precision
 
