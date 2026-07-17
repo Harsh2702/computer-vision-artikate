@@ -33,7 +33,7 @@ class Detector:
         h, w = img.shape[:2]
         scale = min(self.imgsz / h, self.imgsz / w)
         new_h, new_w = int(round(h * scale)), int(round(w * scale))
-        resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+        resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_NEAREST)
         pad_top = (self.imgsz - new_h) // 2
         pad_bot = self.imgsz - new_h - pad_top
         pad_left = (self.imgsz - new_w) // 2
