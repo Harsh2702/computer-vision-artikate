@@ -1,10 +1,13 @@
 """Regression test: ONNX inference must match the ultralytics reference within tolerance.
 
 If preprocessing drifts from what ultralytics does at train time (channel order,
-normalization, letterbox padding, etc.), predictions still fire but confidences
-and coordinates shift systematically. This test compares our Detector against
-ultralytics YOLO on defective validation images and fails when the mean
-confidence gap exceeds a small tolerance.
+normalization, letterbox padding, resize interpolation, etc.), predictions still
+fire but confidences and coordinates shift systematically. This test compares
+our Detector against ultralytics YOLO on defective validation images and fails
+when the mean confidence gap exceeds a small tolerance.
+
+Runs at a low confidence threshold on purpose so that near-threshold cases -
+where preprocessing drift most obviously flips the answer - are included.
 
 Run:
     pytest tests/test_infer.py -v
@@ -28,11 +31,11 @@ WEIGHTS_ONNX = REPO / "runs" / "detect" / "defect_v1" / "weights" / "best.onnx"
 VAL_IMG_DIR = REPO / "defect_data" / "valid" / "images"
 VAL_LBL_DIR = REPO / "defect_data" / "valid" / "labels"
 
-CONF = 0.25
+CONF = 0.05
 IOU = 0.45
-N_IMAGES = 8
-MEAN_CONF_TOL = 0.05
-COUNT_DIFF_TOL_PER_IMG = 1.0
+N_IMAGES = 12
+MEAN_CONF_TOL = 0.005
+COUNT_DIFF_TOL_PER_IMG = 0.05
 
 
 def _defect_images(n):
