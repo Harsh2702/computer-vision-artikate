@@ -125,6 +125,3 @@ Observations:
 
 None of these would survive a stricter confidence threshold, which is another way of saying the model's ceiling here is training-data-limited, not architecture-limited. With more positive examples and a matched background distribution the same YOLOv8n would push mAP well past 0.35.
 
-## Git history
-
-The commit log is the point. It walks: initial import, remove vendored ultralytics, gitignore data, clean_data, cleanup, add dataset + video, ONNX wrapper, export/bench/test scaffolding, **the buggy perf tweak**, **the fix + regression test**.
